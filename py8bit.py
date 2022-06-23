@@ -18,7 +18,6 @@ def pixelate(input_file_path, pixel_size, output_dir):
         Image.NEAREST
     )
 
-
     file_parts = os.path.splitext(os.path.basename(input_file_path))
     basename = '%s-%dpx%s' % (file_parts[0], pixel_size, file_parts[1])
     outfile = os.path.join(output_dir, basename)
