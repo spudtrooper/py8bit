@@ -7,7 +7,7 @@ import sys
 from PIL import Image
 
 
-def pixelate(input_file_path, pixel_size, output_dir):
+def pixelate(input_file_path, outfile, pixel_size):
     image = Image.open(input_file_path)
     image = image.resize(
         (image.size[0] // pixel_size, image.size[1] // pixel_size),
@@ -18,12 +18,7 @@ def pixelate(input_file_path, pixel_size, output_dir):
         Image.NEAREST
     )
 
-    file_parts = os.path.splitext(os.path.basename(input_file_path))
-    basename = '%s-%dpx%s' % (file_parts[0], pixel_size, file_parts[1])
-    outfile = os.path.join(output_dir, basename)
     image.save(outfile)
-    logging.info('wrote to %s' % outfile)
-
 
 def main(prog, args):
     parser = argparse.ArgumentParser(description='Pixelate images')
@@ -35,6 +30,10 @@ def main(prog, args):
                         required=True, help='output directory')
     parser.add_argument('-l', '--logging_level', type=str, default='DEBUG',
                         required=False, help='logging level')
+    parser.add_argument('-s', '--skip_existing_file', type=bool, default=False,
+                        required=False, help='Skip existing file')
+    parser.add_argument('-c', '--continue_after_errors', type=bool, default=False,
+                        required=False, help='Continue after errors')
 
     args = parser.parse_args()
 
@@ -45,7 +44,20 @@ def main(prog, args):
     logging.basicConfig(level=numeric_level)
 
     for img in args.images:
-        pixelate(img, args.pixel_size, args.output_dir)
+        file_parts = os.path.splitext(os.path.basename(img))
+        basename = '%s-%dpx%s' % (file_parts[0], args.pixel_size, file_parts[1])
+        outfile = os.path.join(args.output_dir, basename)
+        if args.skip_existing_file and os.path.exists(outfile):
+          logging.info('skip existing %s', outfile)
+          continue
+        try:
+          pixelate(img, outfile, args.pixel_size)
+        except OSError as e:
+          if args.continue_after_errors:
+            logging.info('error: %s', e)
+          else:
+              raise e
+        logging.info('wrote to %s' % outfile)
 
 
 if __name__ == '__main__':
